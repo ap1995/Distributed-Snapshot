@@ -12,7 +12,6 @@ from heapq import *
 import time
 import sys
 
-
 class Customer:
     hostname = ''
     port = 0
@@ -30,12 +29,13 @@ class Customer:
         self.name = name
         self.port = port
         self.initiate = False
+        self.snapped = False
         self.markerCount = 0
         self.processID = int(self.port) - 4000
         self.hostname = gethostname()
         self.output = open('snaps.txt', 'w')
-        self.dictionary = open('data.json', 'w')
-        self.snapList = []
+        # self.dictionary = open('data.json', 'w')
+        self.dictionary = dict()
         self.s = socket(AF_INET, SOCK_STREAM)
         print(self.name + ", $" + str(self.money))
 
@@ -51,35 +51,50 @@ class Customer:
         print(msg)
 
         if "Money" in msg:
-            port = msg.split()[3]
+            port = msg.split()[-1]
             addmoney = int(msg.split()[4])
             self.money = self.money + addmoney
             print("New Balance " + str(self.money)+ " dollars")
-            if self.markerCount >= 0 <2 or self.initiate:
-                addToDict = {port: [self.port, addmoney]}
-                self.dictionary = json.dumps(addToDict, self.dictionary)
-                x = json.loads(self.dictionary)
-                print(x)
+            if self.snapped:
+                if self.dictionary[int(self.snapID)] >= 0 <2 or self.initiate:
+                    addToDict = {port: [self.port, addmoney]}
+                    self.dictionary[int(self.snapID)] = addToDict
+                    # x = json.loads(self.dictionary)
+                    # print(x)
 
         if "Marker" in msg:
             port = msg.split()[2]
-            self.markerCount = self.markerCount +1
-            self.whenSnapped()
+            print(self.dictionary)
+            self.dictionary[int(self.snapID)] = self.dictionary[int(self.snapID)] +1
+            self.whenSnapped(int(self.snapID))
+
+        if "Add" in msg:
+            self.snapID = msg.split()[-1]
+            newSnap = {int(self.snapID): self.markerCount}
+            self.dictionary = newSnap
+            print(json.dumps(self.dictionary))
 
     def awaitInput(self):
         while True:
             message = input('Enter snap to take a snapshot: ')
             if (message == 'snap'):
                 self.initiate = True
-                self.markerCount = self.markerCount +1
-                start_new_thread(self.whenSnapped, ())
+                self.snapID = self.processID
+                toAdd = {self.snapID: self.markerCount}
+                m = "Add to dict "+ str(self.snapID)
+                self.sendToAll(m)
+                self.dictionary = toAdd
+                # self.markerCount = self.markerCount +1
+                start_new_thread(self.whenSnapped, (self.snapID,))
             else:
                 print('Invalid input')
 
-    def whenSnapped(self):
+    def whenSnapped(self, snapID):
 
-        systemName = "C" + str(self.processID)
-        if self.markerCount < 2:
+        # systemName = "C" + str(self.processID)
+        self.snapped =True
+        # print("Snapshot initiated by process "+str(snapID))
+        if int(self.dictionary[snapID]) < 2:
             snapState = self.name + " " + str(self.money) # write to a text file
             self.output.write(snapState)
             marker = "Marker from " + str(self.port)
@@ -87,10 +102,10 @@ class Customer:
             self.sendToAll(marker)
             time.sleep(delay)
 
-        if self.markerCount ==2:
+        if self.dictionary[snapID] ==2:
             print("Snapshot complete")
             self.output.close()
-            self.markerCount = 0
+            self.dictionary[snapID] = 0
 
         ## Print snapshot
         # print(snapState)
