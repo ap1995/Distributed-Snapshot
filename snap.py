@@ -29,11 +29,13 @@ class Customer:
         self.money = configdata["customers"][ID][3]
         self.name = name
         self.port = port
+        self.initiate = False
         self.markerCount = 0
         self.processID = int(self.port) - 4000
         self.hostname = gethostname()
-        # self.replyList = []
         self.output = open('snaps.txt', 'w')
+        self.dictionary = open('data.json', 'w')
+        self.snapList = []
         self.s = socket(AF_INET, SOCK_STREAM)
         print(self.name + ", $" + str(self.money))
 
@@ -52,7 +54,12 @@ class Customer:
             port = msg.split()[3]
             addmoney = int(msg.split()[4])
             self.money = self.money + addmoney
-            print("New Balance " + str(self.money))
+            print("New Balance " + str(self.money)+ " dollars")
+            if self.markerCount >= 0 <2 or self.initiate:
+                addToDict = {port: [self.port, addmoney]}
+                self.dictionary = json.dumps(addToDict, self.dictionary)
+                x = json.loads(self.dictionary)
+                print(x)
 
         if "Marker" in msg:
             port = msg.split()[2]
@@ -63,6 +70,7 @@ class Customer:
         while True:
             message = input('Enter snap to take a snapshot: ')
             if (message == 'snap'):
+                self.initiate = True
                 self.markerCount = self.markerCount +1
                 start_new_thread(self.whenSnapped, ())
             else:
@@ -71,41 +79,37 @@ class Customer:
     def whenSnapped(self):
 
         systemName = "C" + str(self.processID)
-        snapState = self.name + " " + str(self.money) # write to a text file
-        self.output.write(snapState)
-        marker = "Marker from " + str(self.port)
-        # print(marker)
-        self.sendToAll(marker)
-        time.sleep(delay)
+        if self.markerCount < 2:
+            snapState = self.name + " " + str(self.money) # write to a text file
+            self.output.write(snapState)
+            marker = "Marker from " + str(self.port)
+            # print(marker)
+            self.sendToAll(marker)
+            time.sleep(delay)
 
-        while True:
-            if self.markerCount == 2:
-                break
-            else:
-                time.sleep(delay) # record from incoming channels
+        if self.markerCount ==2:
+            print("Snapshot complete")
+            self.output.close()
+            self.markerCount = 0
 
         ## Print snapshot
-        print("Snapshot complete")
         # print(snapState)
         # Print everyone else's balances and money on the fly
-        self.output.close()
-        self.markerCount = 0
+
 
     def sendMoney(self):
         ## select random money to send with 0.2 probability
         i = random.randrange(0, 10)
         if (i <= 2):
             sendmoney = random.randint(0, 1000)
-            print("Current Balance " + str(self.money))
+            print("Current Balance " + str(self.money) + " dollars")
             self.money = self.money - sendmoney
-            print("New Balance " + str(self.money))
+            print("New Balance " + str(self.money)+ " dollars")
             c = ["C1", "C2", "C3"]
-            # print(c)
             c.remove(self.ID)
-            # print(c)
             receiver = random.choice(c)
             receiverport = configdata["customers"][receiver][1]
-            moneymessage = "Money sent from " + str(self.port) + " " + str(sendmoney) + " to customer at" + str(receiverport)
+            moneymessage = "Money sent from " + str(self.port) + " " + str(sendmoney) + " dollars to customer at " + str(receiverport)
             self.sendMessage(receiverport, moneymessage)
             time.sleep(10)
         else:
@@ -146,7 +150,7 @@ class Customer:
                 cSocket.connect((gethostname(), port))
                 print('Connected to port number ' + configdata["customers"][i][1])
                 cSocket.send(message.encode())
-                # time.sleep(delay)
+                time.sleep(delay)
                 print('Message sent to customer at port ' + str(port))
                 cSocket.close()
 
