@@ -30,12 +30,13 @@ class Customer:
         self.port = port
         self.initiate = False
         self.snapped = False
-        self.markerCount = 0
+        # self.markerCount = 0
         self.processID = int(self.port) - 4000
         self.hostname = gethostname()
-        self.output = open('snaps.txt', 'w')
-        # self.dictionary = open('data.json', 'w')
-        self.dictionary = dict()
+        self.snapID = self.processID
+        # self.output = open('snaps.txt', 'w')
+        self.channelState = dict()
+        self.markerReceived = dict()
         self.s = socket(AF_INET, SOCK_STREAM)
         print(self.name + ", $" + str(self.money))
 
@@ -51,41 +52,48 @@ class Customer:
         print(msg)
 
         if "Money" in msg:
-            port = msg.split()[-1]
+            senderport = msg.split()[2]
+            receiverport = msg.split()[-1]
             addmoney = int(msg.split()[4])
             self.money = self.money + addmoney
             print("New Balance " + str(self.money)+ " dollars")
-            if self.snapped:
-                if self.dictionary[int(self.snapID)] >= 0 <2 or self.initiate:
-                    addToDict = {port: [self.port, addmoney]}
-                    self.dictionary.update({int(self.snapID): addToDict})
-                    # self.dictionary[int(self.snapID)] = addToDict
-                    # x = json.loads(self.dictionary)
-                    # print(x)
+            for i in self.markerReceived:
+                if self.snapinProgress and not self.markerReceived[i][receiverport]: # and if not received marker in that channel
+                    addToDict = {senderport: [receiverport, addmoney]}
+                    self.channelState.update({int(self.snapID): addToDict})
+                    self.output.write(self.channelState)
+                    print(self.channelState)
 
         if "Marker" in msg:
             port = msg.split()[2]
-            print(self.dictionary)
-            self.dictionary[int(self.snapID)] = self.dictionary[int(self.snapID)] +1
-            self.whenSnapped(int(self.snapID))
+            snapID = int(msg.split()[-1])
+            self.markerReceived[snapID].update({port:True})
+            # self.markerReceived[int(snapID)][port] =True
+            self.snapinProgress =True
+            print(self.markerReceived)
+            if snapID != self.snapID:
+                self.whenSnapped(snapID)
+            self.checkifComplete(snapID)
+
 
         if "Add" in msg:
-            self.snapID = msg.split()[-1]
-            newSnap = {int(self.snapID): self.markerCount}
-            self.dictionary.update(newSnap)
-            print(json.dumps(self.dictionary))
+            snapID = int(msg.split()[3])
+            newSnap = {int(snapID): {}}
+            self.markerReceived.update(newSnap)
+            print(json.dumps(self.markerReceived))
 
     def awaitInput(self):
+        # define markerReceived dictionary with false values
+        
         while True:
             message = input('Enter snap to take a snapshot: ')
             if (message == 'snap'):
-                self.initiate = True
-                self.snapID = self.processID
-                toAdd = {self.snapID: self.markerCount}
+                self.snapinProgress = True
+                self.markerCount = 0
+                toAdd = {self.snapID: {}}
                 m = "Add to dict "+ str(self.snapID)
                 self.sendToAll(m)
-                self.dictionary = toAdd
-                # self.markerCount = self.markerCount +1
+                self.markerReceived = toAdd
                 start_new_thread(self.whenSnapped, (self.snapID,))
             else:
                 print('Invalid input')
@@ -93,21 +101,33 @@ class Customer:
     def whenSnapped(self, snapID):
 
         # systemName = "C" + str(self.processID)
-        self.snapped =True
         # print("Snapshot initiated by process "+str(snapID))
-        if int(self.dictionary[snapID]) < 2:
+        markerCount = 0
+        for i in self.markerReceived[snapID]:
+            print(self.markerReceived[snapID][i])
+            if (self.markerReceived[snapID][i] == True):
+                markerCount += 1
+
+        if markerCount >=0 and markerCount <2:
             snapState = self.name + " " + str(self.money) # write to a text file
-            # self.output.writable()
+            print(self.markerReceived[snapID])
+            self.output = open('snaps_'+str(self.processID)+'.txt', 'a+')
             self.output.write(snapState)
-            marker = "Marker from " + str(self.port)
+            marker = "Marker from " + str(self.port) + " "+ str(snapID)
             # print(marker)
             self.sendToAll(marker)
             time.sleep(delay)
 
-        if self.dictionary[snapID] ==2:
+    def checkifComplete(self, snapID):
+        markerCount = 0
+        for i in self.markerReceived[snapID]:
+            print(self.markerReceived[snapID][i])
+            if (self.markerReceived[snapID][i] == True):
+                markerCount += 1
+        if markerCount ==2: #Check for 2 Trues
             print("Snapshot complete")
+            self.snapinProgress = False
             self.output.close()
-            self.dictionary[snapID] = 0
 
         ## Print snapshot
         # print(snapState)
