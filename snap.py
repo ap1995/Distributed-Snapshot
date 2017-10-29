@@ -58,7 +58,8 @@ class Customer:
             if self.snapped:
                 if self.dictionary[int(self.snapID)] >= 0 <2 or self.initiate:
                     addToDict = {port: [self.port, addmoney]}
-                    self.dictionary[int(self.snapID)] = addToDict
+                    self.dictionary.update({int(self.snapID): addToDict})
+                    # self.dictionary[int(self.snapID)] = addToDict
                     # x = json.loads(self.dictionary)
                     # print(x)
 
@@ -71,7 +72,7 @@ class Customer:
         if "Add" in msg:
             self.snapID = msg.split()[-1]
             newSnap = {int(self.snapID): self.markerCount}
-            self.dictionary = newSnap
+            self.dictionary.update(newSnap)
             print(json.dumps(self.dictionary))
 
     def awaitInput(self):
@@ -96,6 +97,7 @@ class Customer:
         # print("Snapshot initiated by process "+str(snapID))
         if int(self.dictionary[snapID]) < 2:
             snapState = self.name + " " + str(self.money) # write to a text file
+            # self.output.writable()
             self.output.write(snapState)
             marker = "Marker from " + str(self.port)
             # print(marker)
