@@ -30,10 +30,10 @@ class Customer:
         self.snapinProgress = False
         self.s = socket(AF_INET, SOCK_STREAM)
         print(self.name + ", $" + str(self.money))
-
+        self.output = open('snaps_' + str(self.processID) + '.txt', 'a+')
         start_new_thread(self.startListening, ())
         start_new_thread(self.awaitInput, ())
-        time.sleep(5)
+        time.sleep(delay)
         start_new_thread(self.sendMoney, ())
         while True:
             pass
@@ -52,7 +52,10 @@ class Customer:
                 if self.snapinProgress and not self.markerReceived[i][receiverport]: # and if not received marker in that channel
                     addToDict = {senderport: [receiverport, addmoney]}
                     self.channelState.update({i: addToDict})
-                    self.output.write(self.channelState)
+                    self.channelOutput = open("channels.txt", "a+")
+                    channelString = str(self.channelState[i]) + "sent "+ str(self.channelState[i][1]) + " dollars to "+ str(self.channelState[1])
+                    self.channelOutput.write(channelString)
+                    self.channelOutput.close()
                     # print(self.channelState)
 
         if "Marker" in msg:
@@ -98,26 +101,26 @@ class Customer:
                 markerCount += 1
 
         if markerCount >=0 and markerCount <2:
-            snapState = self.name + " " + str(self.money) # write to a text file
+            snapState = self.name + " has " + str(self.money) + " dollars." # write to a text file
             # print(self.markerReceived[snapID])
-            self.output = open('snaps_'+str(self.processID)+'.txt', 'a+')
+            self.output = open('snaps_' + str(self.processID) + '.txt', 'a+')
             self.output.write(snapState)
             marker = "Marker from " + str(self.port) + " "+ str(snapID)
             # print(marker)
             self.sendToAll(marker)
-            time.sleep(delay)
+            # time.sleep(delay)
 
     def checkifComplete(self, snapID):
         markerCount = 0
         for i in self.markerReceived[snapID]:
-            print(self.markerReceived[snapID][i])
+            # print(self.markerReceived[snapID][i])
             if (self.markerReceived[snapID][i] == True):
                 markerCount += 1
         if markerCount ==2: #Check for 2 Trues
             print("Snapshot complete")
             self.snapinProgress = False
             self.output.close()
-            # self.markerReceived.pop(snapID)
+            self.markerReceived[snapID]= {}
 
             # outfile = 'snaps.txt'
             # destination = open(outfile, 'w')
@@ -184,7 +187,7 @@ class Customer:
                 cSocket.connect((gethostname(), port))
                 print('Connected to port number ' + configdata["customers"][i][1])
                 cSocket.send(message.encode())
-                time.sleep(delay)
+                # time.sleep(delay)
                 print('Message sent to customer at port ' + str(port))
                 cSocket.close()
 
