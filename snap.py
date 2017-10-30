@@ -7,36 +7,27 @@ from socket import *
 from _thread import *
 import json
 import threading
+import shutil
 import random
 from heapq import *
 import time
 import sys
 
 class Customer:
-    hostname = ''
-    port = 0
-    s = None
-    processID = 0
-    replyList = []
 
     # Initializing Client and its attributes
     def __init__(self, ID):
         print("System running: " + ID)
         self.ID = ID
-        port = configdata["customers"][ID][1]
-        name = configdata["customers"][ID][2]
+        self.port = configdata["customers"][ID][1]
+        self.name = configdata["customers"][ID][2]
         self.money = configdata["customers"][ID][3]
-        self.name = name
-        self.port = port
-        self.initiate = False
-        self.snapped = False
-        # self.markerCount = 0
         self.processID = int(self.port) - 4000
         self.hostname = gethostname()
         self.snapID = self.processID
-        # self.output = open('snaps.txt', 'w')
         self.channelState = dict()
         self.markerReceived = dict()
+        self.snapinProgress = False
         self.s = socket(AF_INET, SOCK_STREAM)
         print(self.name + ", $" + str(self.money))
 
@@ -60,21 +51,20 @@ class Customer:
             for i in self.markerReceived:
                 if self.snapinProgress and not self.markerReceived[i][receiverport]: # and if not received marker in that channel
                     addToDict = {senderport: [receiverport, addmoney]}
-                    self.channelState.update({int(self.snapID): addToDict})
+                    self.channelState.update({i: addToDict})
                     self.output.write(self.channelState)
-                    print(self.channelState)
+                    # print(self.channelState)
 
         if "Marker" in msg:
             port = msg.split()[2]
             snapID = int(msg.split()[-1])
             self.markerReceived[snapID].update({port:True})
-            # self.markerReceived[int(snapID)][port] =True
+            # self.markerReceived[snapID][port]= True
             self.snapinProgress =True
             print(self.markerReceived)
             if snapID != self.snapID:
                 self.whenSnapped(snapID)
             self.checkifComplete(snapID)
-
 
         if "Add" in msg:
             snapID = int(msg.split()[3])
@@ -84,7 +74,6 @@ class Customer:
 
     def awaitInput(self):
         # define markerReceived dictionary with false values
-        
         while True:
             message = input('Enter snap to take a snapshot: ')
             if (message == 'snap'):
@@ -94,7 +83,7 @@ class Customer:
                 m = "Add to dict "+ str(self.snapID)
                 self.sendToAll(m)
                 self.markerReceived = toAdd
-                start_new_thread(self.whenSnapped, (self.snapID,))
+                self.whenSnapped(self.snapID)
             else:
                 print('Invalid input')
 
@@ -104,13 +93,13 @@ class Customer:
         # print("Snapshot initiated by process "+str(snapID))
         markerCount = 0
         for i in self.markerReceived[snapID]:
-            print(self.markerReceived[snapID][i])
+            # print(self.markerReceived[snapID][i])
             if (self.markerReceived[snapID][i] == True):
                 markerCount += 1
 
         if markerCount >=0 and markerCount <2:
             snapState = self.name + " " + str(self.money) # write to a text file
-            print(self.markerReceived[snapID])
+            # print(self.markerReceived[snapID])
             self.output = open('snaps_'+str(self.processID)+'.txt', 'a+')
             self.output.write(snapState)
             marker = "Marker from " + str(self.port) + " "+ str(snapID)
@@ -128,6 +117,14 @@ class Customer:
             print("Snapshot complete")
             self.snapinProgress = False
             self.output.close()
+            # self.markerReceived.pop(snapID)
+
+            # outfile = 'snaps.txt'
+            # destination = open(outfile, 'w')
+            # shutil.copyfileobj(open('snaps_1.txt', 'rb'), destination)
+            # shutil.copyfileobj(open('snaps_2.txt', 'rb'), destination)
+            # shutil.copyfileobj(open('snaps_3.txt', 'rb'), destination)
+            # destination.close()
 
         ## Print snapshot
         # print(snapState)
