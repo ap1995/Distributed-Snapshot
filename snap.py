@@ -31,6 +31,7 @@ class Customer:
         self.s = socket(AF_INET, SOCK_STREAM)
         print(self.name + ", $" + str(self.money))
         self.output = open('snaps_' + str(self.processID) + '.txt', 'a+')
+        # self.channelOutput = open('channels.txt', 'w+')
         start_new_thread(self.startListening, ())
         start_new_thread(self.awaitInput, ())
         time.sleep(delay)
@@ -46,36 +47,46 @@ class Customer:
             senderport = int(msg.split()[3])
             receiverport = int(msg.split()[-1])
             addmoney = int(msg.split()[4])
+            time.sleep(10)
             for i in self.markerReceived:
-                if self.snapinProgress and not self.markerReceived[i][receiverport]: # and if not received marker in that channel
-                    addToDict = {senderport: [receiverport, addmoney]}
-                    self.channelState.update({i: addToDict})
-                    self.channelOutput = open("channels_"+str(self.snapID)+".txt", "w+")
-                    channelString = str(self.channelState[i]) + "sent "+ str(self.channelState[i][1]) + " dollars to "+ str(self.channelState[1])
-                    print(channelString)
-                    self.channelOutput.write(channelString)
-                    self.channelOutput.close()
+                try: ## get i corresponding to who started snapshot only
+                    if self.snapinProgress and not self.markerReceived[i][receiverport]: # and if not received marker in that channel
+                        addToDict = {senderport: [receiverport, addmoney]}
+                        self.channelState.update({i: addToDict})
+                        self.channelOutput = open('channels_'+str(self.snapID)+'.txt', 'a+')
+                        # self.channelOutput = open('channels.txt', 'a+')
+                        for k in self.channelState[i].keys():
+                            channelString = "Snapshot " + str(i) + ": " + str(k) + " sent " + str(self.channelState[i][k][1]) + " dollars to " + str(self.channelState[i][k][0]) + "\n"
+                        print(channelString)
+                        print(self.channelState)
+                        self.channelOutput.write(channelString)
+                        self.channelOutput.close()
+                except KeyError:
+                    pass
             time.sleep(10)
             self.money = self.money + addmoney
+            print("Money Received \n")
             print("New Balance " + str(self.money) + " dollars")
 
         if "Marker" in msg:
             # time.sleep(delay)
             port = int(msg.split()[2])
             snapID = int(msg.split()[-1])
-            self.markerReceived[snapID].update({port:True})
+            self.markerReceived[snapID].update({port:True}) ########################3
             # self.markerReceived[snapID][port]= True
-            self.snapinProgress =True
+            # self.snapinProgress =True
             print(self.markerReceived)
             if snapID != self.snapID:
                 self.whenSnapped(snapID)
             self.checkifComplete(snapID)
 
-        if "Add" in msg:
-            snapID = int(msg.split()[3])
-            newSnap = {int(snapID): {}}
-            self.markerReceived.update(newSnap)
+        # if "Add" in msg:
+        #     snapID = int(msg.split()[3])
+        #     newSnap = {int(snapID): {}}
+        #     self.markerReceived.update(newSnap)
             # print(json.dumps(self.markerReceived))
+        if "Snap" in msg:
+            self.snapinProgress =True
 
     def awaitInput(self):
         # define markerReceived dictionary with false values
@@ -85,10 +96,11 @@ class Customer:
             if (message == 'snap'):
                 self.snapinProgress = True
                 self.markerCount = 0
-                toAdd = {int(self.snapID): {}}
-                m = "Add to dict "+ str(self.snapID)
+                # toAdd = {int(self.snapID): {}}
+                # m = "Add to dict "+ str(self.snapID)
+                m = "Snap"
                 self.sendToAll(m)
-                self.markerReceived = toAdd
+                # self.markerReceived = toAdd
                 self.whenSnapped(self.snapID)
             else:
                 print('Invalid input')
@@ -106,7 +118,7 @@ class Customer:
             # print(self.markerReceived[snapID])
             self.output = open('snaps_' + str(self.processID) + '.txt', 'a+')
             self.output.write(snapState)
-            marker = "Marker from " + str(self.port) + " "+ str(snapID)
+            marker = "Marker from " + str(self.port) + " for snapshot initiated by Customer "+ str(snapID)
             time.sleep(delay)
             self.sendToAll(marker)
 
@@ -120,7 +132,11 @@ class Customer:
         if markerCount ==2: #Check for 2 Trues
             print("Snapshot complete")
             self.snapinProgress = False
-            self.output.close()
+            try:
+                self.output.close()
+            except ValueError:
+                pass
+
             for i in self.markerReceived[snapID]:
                 self.markerReceived[snapID][i] = False
             # make everything false
@@ -151,8 +167,8 @@ class Customer:
             moneymessage = "Money sent from " + str(self.port) + " " + str(sendmoney) + " dollars to customer at " + str(receiverport)
             self.sendMessage(receiverport, moneymessage)
             time.sleep(delay)
-        else:
-            time.sleep(1)
+        # else:
+        #     time.sleep(delay)
 
     def startListening(self):
         try:
