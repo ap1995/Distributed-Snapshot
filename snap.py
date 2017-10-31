@@ -43,23 +43,25 @@ class Customer:
         print(msg)
 
         if "Money" in msg:
-            senderport = msg.split()[2]
-            receiverport = msg.split()[-1]
+            senderport = int(msg.split()[3])
+            receiverport = int(msg.split()[-1])
             addmoney = int(msg.split()[4])
-            self.money = self.money + addmoney
-            print("New Balance " + str(self.money)+ " dollars")
             for i in self.markerReceived:
                 if self.snapinProgress and not self.markerReceived[i][receiverport]: # and if not received marker in that channel
                     addToDict = {senderport: [receiverport, addmoney]}
                     self.channelState.update({i: addToDict})
-                    self.channelOutput = open("channels.txt", "a+")
+                    self.channelOutput = open("channels_"+str(self.snapID)+".txt", "w+")
                     channelString = str(self.channelState[i]) + "sent "+ str(self.channelState[i][1]) + " dollars to "+ str(self.channelState[1])
+                    print(channelString)
                     self.channelOutput.write(channelString)
                     self.channelOutput.close()
-                    # print(self.channelState)
+            time.sleep(10)
+            self.money = self.money + addmoney
+            print("New Balance " + str(self.money) + " dollars")
 
         if "Marker" in msg:
-            port = msg.split()[2]
+            # time.sleep(delay)
+            port = int(msg.split()[2])
             snapID = int(msg.split()[-1])
             self.markerReceived[snapID].update({port:True})
             # self.markerReceived[snapID][port]= True
@@ -73,16 +75,17 @@ class Customer:
             snapID = int(msg.split()[3])
             newSnap = {int(snapID): {}}
             self.markerReceived.update(newSnap)
-            print(json.dumps(self.markerReceived))
+            # print(json.dumps(self.markerReceived))
 
     def awaitInput(self):
         # define markerReceived dictionary with false values
+        self.markerReceived.update({1: {4002:False, 4003:False}, 2: {4001:False, 4003:False}, 3: {4001:False, 4002:False}})
         while True:
             message = input('Enter snap to take a snapshot: ')
             if (message == 'snap'):
                 self.snapinProgress = True
                 self.markerCount = 0
-                toAdd = {self.snapID: {}}
+                toAdd = {int(self.snapID): {}}
                 m = "Add to dict "+ str(self.snapID)
                 self.sendToAll(m)
                 self.markerReceived = toAdd
@@ -91,9 +94,7 @@ class Customer:
                 print('Invalid input')
 
     def whenSnapped(self, snapID):
-
         # systemName = "C" + str(self.processID)
-        # print("Snapshot initiated by process "+str(snapID))
         markerCount = 0
         for i in self.markerReceived[snapID]:
             # print(self.markerReceived[snapID][i])
@@ -101,14 +102,14 @@ class Customer:
                 markerCount += 1
 
         if markerCount >=0 and markerCount <2:
-            snapState = self.name + " has " + str(self.money) + " dollars." # write to a text file
+            snapState = "Snapshot " + str(snapID) + ": " + self.name + " has " + str(self.money) + " dollars."+"\n" # write to a text file
             # print(self.markerReceived[snapID])
             self.output = open('snaps_' + str(self.processID) + '.txt', 'a+')
             self.output.write(snapState)
             marker = "Marker from " + str(self.port) + " "+ str(snapID)
-            # print(marker)
+            time.sleep(delay)
             self.sendToAll(marker)
-            # time.sleep(delay)
+
 
     def checkifComplete(self, snapID):
         markerCount = 0
@@ -120,10 +121,12 @@ class Customer:
             print("Snapshot complete")
             self.snapinProgress = False
             self.output.close()
-            self.markerReceived[snapID]= {}
+            for i in self.markerReceived[snapID]:
+                self.markerReceived[snapID][i] = False
+            # make everything false
 
             # outfile = 'snaps.txt'
-            # destination = open(outfile, 'w')
+            # destination = open(outfile, 'wb')
             # shutil.copyfileobj(open('snaps_1.txt', 'rb'), destination)
             # shutil.copyfileobj(open('snaps_2.txt', 'rb'), destination)
             # shutil.copyfileobj(open('snaps_3.txt', 'rb'), destination)
@@ -132,7 +135,6 @@ class Customer:
         ## Print snapshot
         # print(snapState)
         # Print everyone else's balances and money on the fly
-
 
     def sendMoney(self):
         ## select random money to send with 0.2 probability
@@ -148,9 +150,9 @@ class Customer:
             receiverport = configdata["customers"][receiver][1]
             moneymessage = "Money sent from " + str(self.port) + " " + str(sendmoney) + " dollars to customer at " + str(receiverport)
             self.sendMessage(receiverport, moneymessage)
-            time.sleep(10)
+            time.sleep(delay)
         else:
-            time.sleep(10)
+            time.sleep(1)
 
     def startListening(self):
         try:
