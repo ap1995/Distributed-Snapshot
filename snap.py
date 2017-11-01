@@ -27,6 +27,7 @@ class Customer:
         self.snapID = self.processID
         self.channelState = dict()
         self.markerReceived = dict()
+        self.snapInitiator = 0
         self.snapinProgress = False
         self.s = socket(AF_INET, SOCK_STREAM)
         print(self.name + ", $" + str(self.money))
@@ -52,11 +53,12 @@ class Customer:
                 try: ## get i corresponding to who started snapshot only
                     if self.snapinProgress and not self.markerReceived[i][receiverport]: # and if not received marker in that channel
                         addToDict = {senderport: [receiverport, addmoney]}
-                        self.channelState.update({i: addToDict})
-                        self.channelOutput = open('channels_'+str(self.snapID)+'.txt', 'a+')
+                        self.channelState.update({self.snapInitiator: addToDict}) ##Change
+                        self.channelOutput = open('outputfiles/channels_'+str(self.snapID)+'.txt', 'a')
                         # self.channelOutput = open('channels.txt', 'a+')
+                        channelString = ""
                         for k in self.channelState[i].keys():
-                            channelString = "Snapshot " + str(i) + ": " + str(k) + " sent " + str(self.channelState[i][k][1]) + " dollars to " + str(self.channelState[i][k][0]) + "\n"
+                            channelString = "Snapshot " + str(self.snapInitiator) + ": " + str(k) + " sent " + str(self.channelState[i][k][1]) + " dollars to " + str(self.channelState[i][k][0]) + "\n" ## change
                         print(channelString)
                         print(self.channelState)
                         self.channelOutput.write(channelString)
@@ -72,21 +74,18 @@ class Customer:
             # time.sleep(delay)
             port = int(msg.split()[2])
             snapID = int(msg.split()[-1])
-            self.markerReceived[snapID].update({port:True}) ########################3
-            # self.markerReceived[snapID][port]= True
+            # self.markerReceived[snapID].update({port:True}) #################
+            self.markerReceived[snapID][port]= True
             # self.snapinProgress =True
             print(self.markerReceived)
             if snapID != self.snapID:
                 self.whenSnapped(snapID)
             self.checkifComplete(snapID)
 
-        # if "Add" in msg:
-        #     snapID = int(msg.split()[3])
-        #     newSnap = {int(snapID): {}}
-        #     self.markerReceived.update(newSnap)
-            # print(json.dumps(self.markerReceived))
         if "Snap" in msg:
+            self.snapInitiator = int(msg.split()[-1])
             self.snapinProgress =True
+            time.sleep(delay)
 
     def awaitInput(self):
         # define markerReceived dictionary with false values
@@ -96,9 +95,10 @@ class Customer:
             if (message == 'snap'):
                 self.snapinProgress = True
                 self.markerCount = 0
+                self.snapInitiator = self.snapID
                 # toAdd = {int(self.snapID): {}}
                 # m = "Add to dict "+ str(self.snapID)
-                m = "Snap"
+                m = "Snap started by " + str(self.snapInitiator)
                 self.sendToAll(m)
                 # self.markerReceived = toAdd
                 self.whenSnapped(self.snapID)
@@ -116,7 +116,7 @@ class Customer:
         if markerCount >=0 and markerCount <2:
             snapState = "Snapshot " + str(snapID) + ": " + self.name + " has " + str(self.money) + " dollars."+"\n" # write to a text file
             # print(self.markerReceived[snapID])
-            self.output = open('snaps_' + str(self.processID) + '.txt', 'a+')
+            self.output = open('outputfiles/snaps_' + str(self.processID) + '.txt', 'a')
             self.output.write(snapState)
             marker = "Marker from " + str(self.port) + " for snapshot initiated by Customer "+ str(snapID)
             time.sleep(delay)
@@ -141,16 +141,17 @@ class Customer:
                 self.markerReceived[snapID][i] = False
             # make everything false
 
-            # outfile = 'snaps.txt'
-            # destination = open(outfile, 'wb')
-            # shutil.copyfileobj(open('snaps_1.txt', 'rb'), destination)
-            # shutil.copyfileobj(open('snaps_2.txt', 'rb'), destination)
-            # shutil.copyfileobj(open('snaps_3.txt', 'rb'), destination)
-            # destination.close()
+            outfile = 'snaps.txt'
+            destination = open(outfile, 'wb')
+            shutil.copyfileobj(open('outputfiles/snaps_1.txt', 'rb'), destination)
+            shutil.copyfileobj(open('outputfiles/snaps_2.txt', 'rb'), destination)
+            shutil.copyfileobj(open('outputfiles/snaps_3.txt', 'rb'), destination)
+            shutil.copyfileobj(open('outputfiles/channels_1.txt', 'rb'), destination)
+            shutil.copyfileobj(open('outputfiles/channels_2.txt', 'rb'), destination)
+            shutil.copyfileobj(open('outputfiles/channels_3.txt', 'rb'), destination)
+            destination.close()
 
-        ## Print snapshot
-        # print(snapState)
-        # Print everyone else's balances and money on the fly
+            #Print snapshot
 
     def sendMoney(self):
         ## select random money to send with 0.2 probability
