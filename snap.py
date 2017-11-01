@@ -31,7 +31,7 @@ class Customer:
         self.snapinProgress = False
         self.s = socket(AF_INET, SOCK_STREAM)
         print(self.name + ", $" + str(self.money))
-        self.output = open('snaps_' + str(self.processID) + '.txt', 'a+')
+        self.output = open('outputfiles/snaps_' + str(self.processID) + '.txt', 'a+')
         # self.channelOutput = open('channels.txt', 'w+')
         start_new_thread(self.startListening, ())
         start_new_thread(self.awaitInput, ())
@@ -48,24 +48,27 @@ class Customer:
             senderport = int(msg.split()[3])
             receiverport = int(msg.split()[-1])
             addmoney = int(msg.split()[4])
-            time.sleep(10)
+            time.sleep(delay)
             for i in self.markerReceived:
-                try: ## get i corresponding to who started snapshot only
+                try: ## only prints channel state for one money transaction
                     if self.snapinProgress and not self.markerReceived[i][receiverport]: # and if not received marker in that channel
                         addToDict = {senderport: [receiverport, addmoney]}
                         self.channelState.update({self.snapInitiator: addToDict})
                         self.channelOutput = open('outputfiles/channels_'+str(self.snapID)+'.txt', 'a')
-                        # self.channelOutput = open('channels.txt', 'a+')
                         channelString = ""
                         for k in self.channelState[i].keys():
-                            channelString = "Snapshot " + str(self.snapInitiator) + ": " + str(k) + " sent " + str(self.channelState[i][k][1]) + " dollars to " + str(self.channelState[i][k][0]) + "\n"
+                            naam = "C" + str(k - 4000)
+                            rec = "C" + str(int(self.channelState[i][k][0]) - 4000)
+                            channelString = "Snapshot " + str(self.snapInitiator) + ": " + configdata["customers"][naam][2] + " sent " + str(self.channelState[i][k][1]) + " dollars to " + str(
+                                configdata["customers"][rec][2]) + "\n"
+                            # channelString = "Snapshot " + str(self.snapInitiator) + ": " + str(k) + " sent " + str(self.channelState[i][k][1]) + " dollars to " + str(self.channelState[i][k][0]) + "\n"
                         print(channelString)
                         print(self.channelState)
                         self.channelOutput.write(channelString)
                         self.channelOutput.close()
                 except KeyError:
                     pass
-            time.sleep(10)
+            time.sleep(delay)
             self.money = self.money + addmoney
             print("Money Received \n")
             print("New Balance " + str(self.money) + " dollars")
@@ -112,7 +115,7 @@ class Customer:
             # print(self.markerReceived[snapID][i])
             if (self.markerReceived[snapID][i] == True):
                 markerCount += 1
-
+        # time.sleep(delay)
         if markerCount >=0 and markerCount <2:
             snapState = "Snapshot " + str(snapID) + ": " + self.name + " has " + str(self.money) + " dollars."+"\n" # write to a text file
             # print(self.markerReceived[snapID])
@@ -150,11 +153,11 @@ class Customer:
             shutil.copyfileobj(open('outputfiles/channels_2.txt', 'rb'), destination)
             shutil.copyfileobj(open('outputfiles/channels_3.txt', 'rb'), destination)
             destination.close()
-
             #Print snapshot
 
     def sendMoney(self):
         ## select random money to send with 0.2 probability
+        # while True:
         i = random.randrange(0, 10)
         if (i <= 2):
             sendmoney = random.randint(0, 1000)
@@ -168,8 +171,8 @@ class Customer:
             moneymessage = "Money sent from " + str(self.port) + " " + str(sendmoney) + " dollars to customer at " + str(receiverport)
             self.sendMessage(receiverport, moneymessage)
             time.sleep(delay)
-        # else:
-        #     time.sleep(delay)
+            # else:
+            #     time.sleep(delay)
 
     def startListening(self):
         try:
