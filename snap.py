@@ -53,12 +53,12 @@ class Customer:
                 try: ## get i corresponding to who started snapshot only
                     if self.snapinProgress and not self.markerReceived[i][receiverport]: # and if not received marker in that channel
                         addToDict = {senderport: [receiverport, addmoney]}
-                        self.channelState.update({self.snapInitiator: addToDict}) ##Change
+                        self.channelState.update({self.snapInitiator: addToDict})
                         self.channelOutput = open('outputfiles/channels_'+str(self.snapID)+'.txt', 'a')
                         # self.channelOutput = open('channels.txt', 'a+')
                         channelString = ""
                         for k in self.channelState[i].keys():
-                            channelString = "Snapshot " + str(self.snapInitiator) + ": " + str(k) + " sent " + str(self.channelState[i][k][1]) + " dollars to " + str(self.channelState[i][k][0]) + "\n" ## change
+                            channelString = "Snapshot " + str(self.snapInitiator) + ": " + str(k) + " sent " + str(self.channelState[i][k][1]) + " dollars to " + str(self.channelState[i][k][0]) + "\n"
                         print(channelString)
                         print(self.channelState)
                         self.channelOutput.write(channelString)
