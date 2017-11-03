@@ -121,6 +121,7 @@ class Customer:
 
             lines = open('snaps.txt', 'r').readlines() #Remove duplicate recordings of channel state
             lines_set = set(lines)
+            lines_set = sorted(lines)
             out = open('snaps.txt', 'w')
             for line in lines_set:
                 out.write(line)
@@ -156,10 +157,10 @@ class Customer:
                     self.channelOutput = open('outputfiles/channels_' + str(self.snapID) + '.txt', 'a')
                     channelString = ""
                     for k in self.channelState[i].keys():
-                        naam = "C" + str(k - 4000)
+                        # naam =
                         rec = "C" + str(int(self.channelState[i][k][0]) - 4000)
                         channelString = "Channel State for Snapshot " + str(snapInitiator) + ": " + \
-                                        configdata["customers"][naam][
+                                        configdata["customers"]["C" + str(k - 4000)][
                                             2] + " sent " + str(self.channelState[i][k][1]) + " dollars to " + str(
                             configdata["customers"][rec][2]) + "\n"
                     print(channelString)
