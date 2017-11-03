@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-# Created on Thu Oct 5 14:07:10 2017
-
-# @author: ashwini
-
 from socket import *
 from _thread import *
 import json
@@ -92,7 +87,7 @@ class Customer:
 
     def awaitInput(self):
         # define markerReceived dictionary with false values
-        self.markerReceived.update({1: {4002:False, 4003:False}, 2: {4001:False, 4003:False}, 3: {4001:False, 4002:False}})
+        self.markerReceived.update({1: {4001:False, 4002:False, 4003:False}, 2: {4001:False, 4002:False, 4003:False}, 3: {4001:False, 4002:False, 4003:False}})
         while True:
             message = input('Enter snap to take a snapshot: ')
             if (message == 'snap'):
@@ -157,22 +152,22 @@ class Customer:
 
     def sendMoney(self):
         ## select random money to send with 0.2 probability
-        # while True:
-        i = random.randrange(0, 10)
-        if (i <= 2):
-            sendmoney = random.randint(0, 1000)
-            print("Current Balance " + str(self.money) + " dollars")
-            self.money = self.money - sendmoney
-            print("New Balance " + str(self.money)+ " dollars")
-            c = ["C1", "C2", "C3"]
-            c.remove(self.ID)
-            receiver = random.choice(c)
-            receiverport = configdata["customers"][receiver][1]
-            moneymessage = "Money sent from " + str(self.port) + " " + str(sendmoney) + " dollars to customer at " + str(receiverport)
-            self.sendMessage(receiverport, moneymessage)
-            time.sleep(delay)
-            # else:
-            #     time.sleep(delay)
+        while True:
+            i = random.randrange(0, 10)
+            if (i <= 2):
+                sendmoney = random.randint(0, 1000)
+                print("Current Balance " + str(self.money) + " dollars")
+                self.money = self.money - sendmoney
+                print("New Balance " + str(self.money)+ " dollars")
+                c = ["C1", "C2", "C3"]
+                c.remove(self.ID)
+                receiver = random.choice(c)
+                receiverport = configdata["customers"][receiver][1]
+                moneymessage = "Money sent from " + str(self.port) + " " + str(sendmoney) + " dollars to customer at " + str(receiverport)
+                self.sendMessage(receiverport, moneymessage)
+                time.sleep(90)
+            else:
+                time.sleep(30)
 
     def startListening(self):
         try:
