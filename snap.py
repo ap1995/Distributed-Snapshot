@@ -21,8 +21,6 @@ class Customer:
         self.snapID = self.processID
         self.channelState = dict()
         self.markerReceived = dict()
-        # self.snapInitiator = 0
-        # self.snapinProgress = False
         self.whoSnapped = {1:False, 2:False, 3:False}
         self.s = socket(AF_INET, SOCK_STREAM)
         print(self.name + ", $" + str(self.money))
@@ -63,7 +61,6 @@ class Customer:
 
         if "Snap" in msg:
             snapInit = int(msg.split()[-1])
-            # self.snapinProgress =True
             self.whoSnapped[snapInit] =True
             time.sleep(delay)
 
@@ -73,28 +70,21 @@ class Customer:
         while True:
             message = input('Enter snap to take a snapshot: ')
             if (message == 'snap'):
-                # self.snapinProgress = True
                 self.whoSnapped[self.snapID] = True
                 self.markerCount = 0
-                # self.snapInitiator = self.snapID
                 m = "Snap started by " + str(self.snapID)
                 self.sendToAll(m)
-                # self.markerReceived = toAdd
                 self.whenSnapped(self.snapID)
             else:
                 print('Invalid input')
 
     def whenSnapped(self, snapID):
-        # systemName = "C" + str(self.processID)
         markerCount = 0
         for i in self.markerReceived[snapID]:
-            # print(self.markerReceived[snapID][i])
             if (self.markerReceived[snapID][i] == True):
                 markerCount += 1
-        # time.sleep(delay)
         if markerCount >=0 and markerCount <2:
             snapState = "Snapshot " + str(snapID) + ": " + self.name + " has " + str(self.money) + " dollars."+"\n" # write to a text file
-            # print(self.markerReceived[snapID])
             self.output = open('outputfiles/snaps_' + str(self.processID) + '.txt', 'a')
             self.output.write(snapState)
             marker = "Marker from " + str(self.port) + " for snapshot initiated by Customer "+ str(snapID)
@@ -105,12 +95,10 @@ class Customer:
     def checkifComplete(self, snapID):
         markerCount = 0
         for i in self.markerReceived[snapID]:
-            # print(self.markerReceived[snapID][i])
             if (self.markerReceived[snapID][i] == True):
                 markerCount += 1
         if markerCount ==2: #Check for 2 Trues
             print("Snapshot complete")
-            # self.snapinProgress = False
             self.whoSnapped[snapID] = False
             try:
                 self.output.close()
@@ -131,7 +119,7 @@ class Customer:
             shutil.copyfileobj(open('outputfiles/channels_3.txt', 'rb'), destination)
             destination.close()
 
-            lines = open('snaps.txt', 'r').readlines()
+            lines = open('snaps.txt', 'r').readlines() #Remove duplicate recordings of channel state
             lines_set = set(lines)
             out = open('snaps.txt', 'w')
             for line in lines_set:
