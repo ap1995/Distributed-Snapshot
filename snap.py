@@ -4,7 +4,6 @@ import json
 import threading
 import shutil
 import random
-from heapq import *
 import time
 import sys
 
@@ -44,25 +43,7 @@ class Customer:
             receiverport = int(msg.split()[-1])
             addmoney = int(msg.split()[4])
             time.sleep(delay)
-            for i in self.markerReceived:
-                try: ## only prints channel state for one money transaction
-                    if self.snapinProgress and not self.markerReceived[i][receiverport]: # and if not received marker in that channel
-                        addToDict = {senderport: [receiverport, addmoney]}
-                        self.channelState.update({self.snapInitiator: addToDict})
-                        self.channelOutput = open('outputfiles/channels_'+str(self.snapID)+'.txt', 'a')
-                        channelString = ""
-                        for k in self.channelState[i].keys():
-                            naam = "C" + str(k - 4000)
-                            rec = "C" + str(int(self.channelState[i][k][0]) - 4000)
-                            channelString = "Snapshot " + str(self.snapInitiator) + ": " + configdata["customers"][naam][2] + " sent " + str(self.channelState[i][k][1]) + " dollars to " + str(
-                                configdata["customers"][rec][2]) + "\n"
-                            # channelString = "Snapshot " + str(self.snapInitiator) + ": " + str(k) + " sent " + str(self.channelState[i][k][1]) + " dollars to " + str(self.channelState[i][k][0]) + "\n"
-                        print(channelString)
-                        print(self.channelState)
-                        self.channelOutput.write(channelString)
-                        self.channelOutput.close()
-                except KeyError:
-                    pass
+            self.addToChannel(senderport, receiverport, addmoney)
             time.sleep(delay)
             self.money = self.money + addmoney
             print("Money Received \n")
@@ -74,7 +55,6 @@ class Customer:
             snapID = int(msg.split()[-1])
             # self.markerReceived[snapID].update({port:True}) #################
             self.markerReceived[snapID][port]= True
-            # self.snapinProgress =True
             print(self.markerReceived)
             if snapID != self.snapID:
                 self.whenSnapped(snapID)
@@ -168,6 +148,27 @@ class Customer:
                 time.sleep(90)
             else:
                 time.sleep(30)
+
+    def addToChannel(self, senderport, receiverport, addmoney):
+        for i in self.markerReceived:
+            try:  ## only prints channel state for one money transaction
+                if self.snapinProgress and not self.markerReceived[i][receiverport]:  # and if not received marker in that channel
+                    addToDict = {senderport: [receiverport, addmoney]}
+                    self.channelState.update({self.snapInitiator: addToDict})
+                    self.channelOutput = open('outputfiles/channels_' + str(self.snapID) + '.txt', 'a')
+                    channelString = ""
+                    for k in self.channelState[i].keys():
+                        naam = "C" + str(k - 4000)
+                        rec = "C" + str(int(self.channelState[i][k][0]) - 4000)
+                        channelString = "Snapshot " + str(self.snapInitiator) + ": " + configdata["customers"][naam][
+                            2] + " sent " + str(self.channelState[i][k][1]) + " dollars to " + str(
+                            configdata["customers"][rec][2]) + "\n"
+                    print(channelString)
+                    print(self.channelState)
+                    self.channelOutput.write(channelString)
+                    self.channelOutput.close()
+            except KeyError:
+                pass
 
     def startListening(self):
         try:
