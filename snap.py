@@ -130,6 +130,13 @@ class Customer:
             shutil.copyfileobj(open('outputfiles/channels_2.txt', 'rb'), destination)
             shutil.copyfileobj(open('outputfiles/channels_3.txt', 'rb'), destination)
             destination.close()
+
+            lines = open('snaps.txt', 'r').readlines()
+            lines_set = set(lines)
+            out = open('snaps.txt', 'w')
+            for line in lines_set:
+                out.write(line)
+
             #Print snapshot
 
     def sendMoney(self):
@@ -154,7 +161,8 @@ class Customer:
     def addToChannel(self, senderport, receiverport, addmoney, snapInitiator):
         for i in self.markerReceived:
             try:  ## only prints channel state for one money transaction
-                if self.whoSnapped[snapInitiator] and not self.markerReceived[i][receiverport]:  # and if not received marker in that channel
+                if self.whoSnapped[snapInitiator] and not self.markerReceived[i][
+                    receiverport]:  # and if not received marker in that channel
                     addToDict = {senderport: [receiverport, addmoney]}
                     self.channelState.update({snapInitiator: addToDict})
                     self.channelOutput = open('outputfiles/channels_' + str(self.snapID) + '.txt', 'a')
@@ -162,8 +170,9 @@ class Customer:
                     for k in self.channelState[i].keys():
                         naam = "C" + str(k - 4000)
                         rec = "C" + str(int(self.channelState[i][k][0]) - 4000)
-                        channelString = "Channel State for Snapshot " + str(snapInitiator) + ": " + configdata["customers"][naam][
-                            2] + " sent " + str(self.channelState[i][k][1]) + " dollars to " + str(
+                        channelString = "Channel State for Snapshot " + str(snapInitiator) + ": " + \
+                                        configdata["customers"][naam][
+                                            2] + " sent " + str(self.channelState[i][k][1]) + " dollars to " + str(
                             configdata["customers"][rec][2]) + "\n"
                     print(channelString)
                     print(self.channelState)
