@@ -21,12 +21,12 @@ class Customer:
         self.snapID = self.processID
         self.channelState = dict()
         self.markerReceived = dict()
-        self.snapInitiator = 0
-        self.snapinProgress = False
+        # self.snapInitiator = 0
+        # self.snapinProgress = False
+        self.whoSnapped = {1:False, 2:False, 3:False}
         self.s = socket(AF_INET, SOCK_STREAM)
         print(self.name + ", $" + str(self.money))
         self.output = open('outputfiles/snaps_' + str(self.processID) + '.txt', 'a+')
-        # self.channelOutput = open('channels.txt', 'w+')
         start_new_thread(self.startListening, ())
         start_new_thread(self.awaitInput, ())
         time.sleep(delay)
@@ -43,7 +43,9 @@ class Customer:
             receiverport = int(msg.split()[-1])
             addmoney = int(msg.split()[4])
             time.sleep(delay)
-            self.addToChannel(senderport, receiverport, addmoney)
+            for i in self.whoSnapped:
+                if(self.whoSnapped[i]==True):
+                    self.addToChannel(senderport, receiverport, addmoney, i)
             time.sleep(delay)
             self.money = self.money + addmoney
             print("Money Received \n")
@@ -53,7 +55,6 @@ class Customer:
             # time.sleep(delay)
             port = int(msg.split()[2])
             snapID = int(msg.split()[-1])
-            # self.markerReceived[snapID].update({port:True}) #################
             self.markerReceived[snapID][port]= True
             print(self.markerReceived)
             if snapID != self.snapID:
@@ -61,8 +62,9 @@ class Customer:
             self.checkifComplete(snapID)
 
         if "Snap" in msg:
-            self.snapInitiator = int(msg.split()[-1])
-            self.snapinProgress =True
+            snapInit = int(msg.split()[-1])
+            # self.snapinProgress =True
+            self.whoSnapped[snapInit] =True
             time.sleep(delay)
 
     def awaitInput(self):
@@ -71,12 +73,11 @@ class Customer:
         while True:
             message = input('Enter snap to take a snapshot: ')
             if (message == 'snap'):
-                self.snapinProgress = True
+                # self.snapinProgress = True
+                self.whoSnapped[self.snapID] = True
                 self.markerCount = 0
-                self.snapInitiator = self.snapID
-                # toAdd = {int(self.snapID): {}}
-                # m = "Add to dict "+ str(self.snapID)
-                m = "Snap started by " + str(self.snapInitiator)
+                # self.snapInitiator = self.snapID
+                m = "Snap started by " + str(self.snapID)
                 self.sendToAll(m)
                 # self.markerReceived = toAdd
                 self.whenSnapped(self.snapID)
@@ -109,7 +110,8 @@ class Customer:
                 markerCount += 1
         if markerCount ==2: #Check for 2 Trues
             print("Snapshot complete")
-            self.snapinProgress = False
+            # self.snapinProgress = False
+            self.whoSnapped[snapID] = False
             try:
                 self.output.close()
             except ValueError:
@@ -149,23 +151,24 @@ class Customer:
             else:
                 time.sleep(30)
 
-    def addToChannel(self, senderport, receiverport, addmoney):
+    def addToChannel(self, senderport, receiverport, addmoney, snapInitiator):
         for i in self.markerReceived:
             try:  ## only prints channel state for one money transaction
-                if self.snapinProgress and not self.markerReceived[i][receiverport]:  # and if not received marker in that channel
+                if self.whoSnapped[snapInitiator] and not self.markerReceived[i][receiverport]:  # and if not received marker in that channel
                     addToDict = {senderport: [receiverport, addmoney]}
-                    self.channelState.update({self.snapInitiator: addToDict})
+                    self.channelState.update({snapInitiator: addToDict})
                     self.channelOutput = open('outputfiles/channels_' + str(self.snapID) + '.txt', 'a')
                     channelString = ""
                     for k in self.channelState[i].keys():
                         naam = "C" + str(k - 4000)
                         rec = "C" + str(int(self.channelState[i][k][0]) - 4000)
-                        channelString = "Snapshot " + str(self.snapInitiator) + ": " + configdata["customers"][naam][
+                        channelString = "Channel State for Snapshot " + str(snapInitiator) + ": " + configdata["customers"][naam][
                             2] + " sent " + str(self.channelState[i][k][1]) + " dollars to " + str(
                             configdata["customers"][rec][2]) + "\n"
                     print(channelString)
                     print(self.channelState)
                     self.channelOutput.write(channelString)
+                    del self.channelState[snapInitiator]
                     self.channelOutput.close()
             except KeyError:
                 pass
