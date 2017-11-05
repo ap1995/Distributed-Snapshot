@@ -1,7 +1,6 @@
 from socket import *
 from _thread import *
 import json
-import threading
 import shutil
 import random
 import time
@@ -20,6 +19,7 @@ class Customer:
         self.hostname = gethostname()
         self.snapID = self.processID
         self.channelState = dict()
+        self.markerReceived = dict()
         self.markerReceived = dict()
         self.whoSnapped = {1:False, 2:False, 3:False}
         self.s = socket(AF_INET, SOCK_STREAM)
@@ -50,11 +50,9 @@ class Customer:
             print("New Balance " + str(self.money) + " dollars")
 
         if "Marker" in msg:
-            # time.sleep(delay)
             port = int(msg.split()[2])
             snapID = int(msg.split()[-1])
             self.markerReceived[snapID][port]= True
-            print(self.markerReceived)
             if snapID != self.snapID:
                 self.whenSnapped(snapID)
             self.checkifComplete(snapID)
@@ -62,11 +60,13 @@ class Customer:
         if "Snap" in msg:
             snapInit = int(msg.split()[-1])
             self.whoSnapped[snapInit] =True
+            self.markerReceived[self.snapID][self.port] = True
             time.sleep(delay)
 
     def awaitInput(self):
         # define markerReceived dictionary with false values
         self.markerReceived.update({1: {4001:False, 4002:False, 4003:False}, 2: {4001:False, 4002:False, 4003:False}, 3: {4001:False, 4002:False, 4003:False}})
+
         while True:
             message = input('Enter snap to take a snapshot: ')
             if (message == 'snap'):
@@ -121,12 +121,11 @@ class Customer:
 
             lines = open('snaps.txt', 'r').readlines() #Remove duplicate recordings of channel state
             lines_set = set(lines)
-            lines_set = sorted(lines)
+            lines_set = sorted(lines_set)
             out = open('snaps.txt', 'w')
             for line in lines_set:
                 out.write(line)
 
-            #Print snapshot
 
     def sendMoney(self):
         ## select random money to send with 0.2 probability
@@ -150,14 +149,12 @@ class Customer:
     def addToChannel(self, senderport, receiverport, addmoney, snapInitiator):
         for i in self.markerReceived:
             try:  ## only prints channel state for one money transaction
-                if self.whoSnapped[snapInitiator] and not self.markerReceived[i][
-                    receiverport]:  # and if not received marker in that channel
+                if self.whoSnapped[snapInitiator] and not self.markerReceived[i][receiverport]:  # and if not received marker in that channel
                     addToDict = {senderport: [receiverport, addmoney]}
                     self.channelState.update({snapInitiator: addToDict})
                     self.channelOutput = open('outputfiles/channels_' + str(self.snapID) + '.txt', 'a')
                     channelString = ""
                     for k in self.channelState[i].keys():
-                        # naam =
                         rec = "C" + str(int(self.channelState[i][k][0]) - 4000)
                         channelString = "Channel State for Snapshot " + str(snapInitiator) + ": " + \
                                         configdata["customers"]["C" + str(k - 4000)][
@@ -206,7 +203,6 @@ class Customer:
                 cSocket.connect((gethostname(), port))
                 print('Connected to port number ' + configdata["customers"][i][1])
                 cSocket.send(message.encode())
-                # time.sleep(delay)
                 print('Message sent to customer at port ' + str(port))
                 cSocket.close()
 
