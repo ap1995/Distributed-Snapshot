@@ -53,6 +53,7 @@ class Customer:
             port = int(msg.split()[2])
             snapID = int(msg.split()[-1])
             self.markerReceived[snapID][port]= True
+            print("\n")
             if snapID != self.snapID:
                 self.whenSnapped(snapID)
             self.checkifComplete(snapID)
