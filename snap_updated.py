@@ -127,7 +127,7 @@ class Customer:
 
             lines = open('snaps.txt', 'r').readlines() #Remove duplicate recordings of channel state
             lines_set = set(lines)
-            lines_set = sorted(lines)
+            lines_set = sorted(lines_set)
             out = open('snaps.txt', 'w')
             for line in lines_set:
                 out.write(line)
